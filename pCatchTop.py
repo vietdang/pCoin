@@ -251,8 +251,12 @@ def wait_top(coin_top, coin_base):
 	price_prev = get_price(coin_top, coin_base, "Bid");
 	while 1:
 		price_current = get_price(coin_top, coin_base, "Bid")
-		print "Current Price: {}".format(price_current)
-		if((price_current*100/price_prev) < 99):
+		change_rate = 0;
+		if(price_prev!=0):
+			change_rate = 100*(price_current-price_prev)/price_prev
+		
+		print "{} Current Price: {}, Change rate: {}".format(str(datetime.now()), price_current, change_rate)
+		if(change_rate < 0):
 			count_price_drop = count_price_drop + 1
 			if (count_price_drop > 1):
 				break
@@ -354,6 +358,7 @@ def main_surf_top():
 	#parse params
 	coin_src = "USDT"
 	coin_target = "LTC"
+	coin_target = raw_input("Pump coin: ")
 	print "Start with {}-{}".format(coin_src, coin_target)
 	if (RUN_TEST):
 		var = raw_input("Please enter Y/N to start/stop: ")
@@ -363,7 +368,7 @@ def main_surf_top():
 		else:
 			print "STOP"
 			return 0
-	func_surf_wave(coin_base, coin_target)
+	func_surf_wave(coin_src, coin_target)
 
 def func_calc_diff():
 
@@ -480,8 +485,8 @@ def main_catch_percent():
 
 def MAIN():
 
-	#main_surf_top()
-	main_catch_percent()
+	main_surf_top()
+	#main_catch_percent()
 
 print "test"
 if __name__ == "__main__":
