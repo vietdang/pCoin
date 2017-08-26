@@ -354,6 +354,7 @@ def main_surf_top():
 	#parse params
 	coin_src = "USDT"
 	coin_target = "LTC"
+	coin_target = raw_input("Coin: ")
 	print "Start with {}-{}".format(coin_src, coin_target)
 	if (RUN_TEST):
 		var = raw_input("Please enter Y/N to start/stop: ")
@@ -363,7 +364,7 @@ def main_surf_top():
 		else:
 			print "STOP"
 			return 0
-	func_surf_wave(coin_base, coin_target)
+	func_surf_wave(coin_src, coin_target)
 
 def func_calc_diff():
 
@@ -480,8 +481,8 @@ def main_catch_percent():
 
 def MAIN():
 
-	#main_surf_top()
-	main_catch_percent()
+	main_surf_top()
+	#main_catch_percent()
 
 print "test"
 if __name__ == "__main__":
