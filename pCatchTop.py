@@ -245,7 +245,7 @@ def get_price(coin1, coin2, type):
 		price = api.get_marketsummary(coin2+"-"+coin1).get("result")[0].get(type)	
 	return price
 	
-def wait_top(coin_top, coin_base):
+def wait_top(coin_top, coin_base, wait_wave_num):
 	#compare 3 times, if drop, this is the top, need to sell immediately
 	count_price_drop = 0;
 	price_prev = get_price(coin_top, coin_base, "Bid");
@@ -258,9 +258,29 @@ def wait_top(coin_top, coin_base):
 		print "{} Current Price: {}, Change rate: {}".format(str(datetime.now()), price_current, change_rate)
 		if(change_rate < 0):
 			count_price_drop = count_price_drop + 1
-			if (count_price_drop > 1):
+			if (count_price_drop > wait_wave_num1):
 				break
 		price_prev = price_current
+
+def wait_descrease_wave(coin_top, coin_base, wait_wave_num, interval):
+	#compare 3 times, if drop, this is the top, need to sell immediately
+	count_price_drop = 0;
+	price_prev = get_price(coin_top, coin_base, "Bid");
+	while 1:
+		price_current = get_price(coin_top, coin_base, "Bid")
+		change_rate = 0;
+		if(price_prev!=0):
+			change_rate = 100*(price_current-price_prev)/price_prev
+		
+		print "{} Current Price: {}, Change rate: {}".format(str(datetime.now()), price_current, change_rate)
+		if(change_rate < 0):
+			count_price_drop = count_price_drop + 1
+			if (count_price_drop > wait_wave_num):
+				break
+		price_prev = price_current
+		if (interval != 0):
+			# Wait interval (s)
+			time.sleep(interval)
 		
 def func_buy_sell_limit(coin_src, coin_target, size, price):
 	try:
@@ -330,7 +350,8 @@ def func_surf_wave(coin_src, coin_target):
 	#get size
 	size = get_available_balance(coin_src)
 	print "Balance: {}".format(size)
-	
+	#input pump coin
+	coin_target = raw_input("Pump coin: ")
 	while 1:
 		#get price ask
 		price_ask = get_price(coin_src, coin_target, "Ask")
@@ -340,7 +361,7 @@ def func_surf_wave(coin_src, coin_target):
 		if (is_trade_order_success(coin_src, coin_target, size, price, 2000)):
 			break
 	#wait top
-	wait_top(coin_target, coin_src)
+	wait_top(coin_target, coin_src,1)
 	
 	#get size
 	size = get_available_balance(coin_target)
@@ -353,13 +374,47 @@ def func_surf_wave(coin_src, coin_target):
 		#sell
 		if (is_trade_order_success(coin_target, coin_src, size, price, 2000)):
 			break
-			
+	
+	#wait top
+	wait_top(coin_target, coin_src, 10)
+def func_pump_wave(coin_src):
+    		
+	#get size
+	size = get_available_balance(coin_src)
+	print "Balance: {}".format(size)
+	#input pump coin
+	coin_target = raw_input("Pump coin: ")
+	print "{} Execute buy/sell coin: {} - {}".format(str(datetime.now()), coin_src, coin_target)
+	while 1:
+		#get price ask
+		price_ask = get_price(coin_src, coin_target, "Ask")
+		
+		price = price_ask
+		#buy
+		if (is_trade_order_success(coin_src, coin_target, size, price, 2000)):
+			break
+	#wait top
+	wait_descrease_wave(coin_target, coin_src, 1, 0)
+	
+	#get size
+	size = get_available_balance(coin_target)
+	#sell
+	while 1:
+		#get price bid
+		price_bid = get_price(coin_src, coin_target, "Bid")
+		
+		price = price_bid
+		#sell
+		if (is_trade_order_success(coin_target, coin_src, size, price, 2000)):
+			break
+	
+	#wait top
+	wait_descrease_wave(coin_target, coin_src, 10, 1)
 def main_surf_top():
 	#parse params
-	coin_src = "USDT"
-	coin_target = "LTC"
-	coin_target = raw_input("Pump coin: ")
-	print "Start with {}-{}".format(coin_src, coin_target)
+	coin_src = "BTC"
+	#coin_target = "LTC"
+	#print "Start with {}-{}".format(coin_src, coin_target)
 	if (RUN_TEST):
 		var = raw_input("Please enter Y/N to start/stop: ")
 		if (var == 'y'):
@@ -368,8 +423,8 @@ def main_surf_top():
 		else:
 			print "STOP"
 			return 0
-	func_surf_wave(coin_src, coin_target)
-
+	#func_surf_wave(coin_src, coin_target)
+	func_pump_wave(coin_src)
 def func_calc_diff():
 
 	currCoin = 10 #simulation if key = None
