@@ -412,9 +412,16 @@ def func_pump_wave(coin_src):
 	wait_descrease_wave(coin_target, coin_src, 10, 1)
 def main_surf_top():
 	#parse params
+<<<<<<< HEAD
 	coin_src = "BTC"
 	#coin_target = "LTC"
 	#print "Start with {}-{}".format(coin_src, coin_target)
+=======
+	coin_src = "USDT"
+	coin_target = "LTC"
+	coin_target = raw_input("Coin: ")
+	print "Start with {}-{}".format(coin_src, coin_target)
+>>>>>>> 42dca925fa6f52e65196c70461ddee79bd9f65be
 	if (RUN_TEST):
 		var = raw_input("Please enter Y/N to start/stop: ")
 		if (var == 'y'):
@@ -423,8 +430,13 @@ def main_surf_top():
 		else:
 			print "STOP"
 			return 0
+<<<<<<< HEAD
 	#func_surf_wave(coin_src, coin_target)
 	func_pump_wave(coin_src)
+=======
+	func_surf_wave(coin_src, coin_target)
+
+>>>>>>> 42dca925fa6f52e65196c70461ddee79bd9f65be
 def func_calc_diff():
 
 	currCoin = 10 #simulation if key = None
