@@ -264,7 +264,7 @@ def wait_top(coin_top, coin_base, wait_wave_num):
 
 def wait_descrease_wave(coin_top, coin_base, wait_wave_num, interval):
 	#compare 3 times, if drop, this is the top, need to sell immediately
-	count_price_drop = 0;
+	count_price_drop = wait_wave_num;
 	price_prev = get_price(coin_top, coin_base, "Bid");
 	while 1:
 		price_current = get_price(coin_top, coin_base, "Bid")
@@ -272,10 +272,10 @@ def wait_descrease_wave(coin_top, coin_base, wait_wave_num, interval):
 		if(price_prev!=0):
 			change_rate = 100*(price_current-price_prev)/price_prev
 		
-		print "{} Current Price: {}, Change rate: {}".format(str(datetime.now()), price_current, change_rate)
+		print "{} Current Price: {}, Change rate: {}, remain wait time: {}".format(str(datetime.now()), price_current, change_rate, count_price_drop)
 		if(change_rate < 0):
-			count_price_drop = count_price_drop + 1
-			if (count_price_drop > wait_wave_num):
+			count_price_drop = count_price_drop - 1
+			if (count_price_drop < 1):
 				break
 		price_prev = price_current
 		if (interval != 0):
