@@ -28,8 +28,17 @@ def MAIN():
 		print r 
 		if r == ERROR.TIME_OUT:
 			#retry with actual price
-			print "Test ok"
-		
+			print "Test order TIME_OUT ok"
+		else:
+			print "Test order TIME_OUT fail"
+			
+	uuid = user.w_order_buy_sell("BTC","XMR", v, p, 3 , False)
+	#market, _ = user.w_get_market_name("BTC","XMR")
+	#r = user.w_get_open_order(market)
+	#print user.w_cancel_order(r[0])
+	print uuid
+	print user.w_cancel_order(uuid)
+	
 	
 if __name__ == "__main__":
 	MAIN()

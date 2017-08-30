@@ -85,6 +85,7 @@ class BittrexBuysellWorker(object):
 		:return: uuid list
 		:rtype : str
 		"""
+		return self.api.get_open_orders(market)
 		
 	def w_order_buy_sell(self, coin1, coin2, value1, price, timeout, cancel_on_timeout = True):
 		"""
@@ -127,10 +128,11 @@ class BittrexBuysellWorker(object):
 					value2_after = self.w_get_balance(coin2)
 					if time.time() > process_time:
 						if cancel_on_timeout: #Cancel order because of timeout
-							self.api.cancel(uuid)	
+							self.w_cancel_order(uuid)	
 							print "Cancel order!"
 						else:
 							print "Order is still open!"
+							return uuid
 						print "{} transaction was timeout".format(type)
 						return ERROR.TIME_OUT
 					if (value2_after < 0):
@@ -149,6 +151,23 @@ class BittrexBuysellWorker(object):
 				return ERROR.CMD_UNSUCCESS
 		except:
 			print "Error buy/sell. Conection failed."
+			return ERROR.CONNECTION_FAIL
+	def w_cancel_order(self, uuid):
+		"""
+		Cancel an order via uuid 
+		:param uuid: order uuid
+		:return: error code
+		:rtype : ERROR
+		"""
+		try:
+			#todo: need check timeout
+			self.api.cancel(uuid)
+			while uuid in self.api.get_open_orders():
+				print "Wait for cancel order {}".format(uuid)
+		
+			return ERROR.CMD_SUCCESS
+		except:
+			print "Cannot cancel order {}".format(uuid)
 			return ERROR.CONNECTION_FAIL
 		
 class PoloniexBuysellWorker(object):

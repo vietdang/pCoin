@@ -1,6 +1,7 @@
 
 
 class ERROR:
+	CMD_SUCCESS              =  0   #Command is success
 	CONNECTION_FAIL          = -1	#Bittrex api JSON cannot connect to server
 	CMD_UNSUCCESS            = -2	#Bittrex api JSON return "success"=False
 	CMD_INVALID              = -3	#Bittrex api not supported. Ex: wrong market name.
