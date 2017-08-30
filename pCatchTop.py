@@ -42,8 +42,8 @@ data = api.get_markets()
 money = 100
 
 def lineno():
-    """Returns the current line number in our program."""
-    return inspect.currentframe().f_back.f_lineno
+	"""Returns the current line number in our program."""
+	return inspect.currentframe().f_back.f_lineno
 	
 def get_new_round():
 	''' Need return buying path . Currently only use static path
@@ -61,7 +61,7 @@ def get_new_round():
 			
 			[(usdt_xxx_ask, usdt_xxx_last, usdt_xxx_bid )]  = [(d.get("Ask"),d.get("Last"),d.get("Bid")) for d in marketsummaries if d['MarketName'] == 'USDT-'+XXX ] 
 			[(usdt_btc_ask, usdt_btc_last, usdt_btc_bid )]  = [(d.get("Ask"),d.get("Last"),d.get("Bid")) for d in marketsummaries if d['MarketName'] == 'USDT-BTC' ]
-			[(btc_xxx_ask, btc_xxx_last, btc_xxx_bid    )]  = [(d.get("Ask"),d.get("Last"),d.get("Bid")) for d in marketsummaries if d['MarketName'] == 'BTC-'+XXX ]
+			[(btc_xxx_ask, btc_xxx_last, btc_xxx_bid	)]  = [(d.get("Ask"),d.get("Last"),d.get("Bid")) for d in marketsummaries if d['MarketName'] == 'BTC-'+XXX ]
 			
 			[(usdt_eth_ask, usdt_eth_last, usdt_eth_bid )]  = [(d.get("Ask"),d.get("Last"),d.get("Bid")) for d in marketsummaries if d['MarketName'] == 'USDT-ETH' ]
 			if (XXX != "ETH"):
@@ -71,9 +71,9 @@ def get_new_round():
 			#print type(usdt_btc)
 			#print usdt_btc
 			''' note: 
-			cw1 clockwise        :  usdt -> btc -> xxx -> usdt
+			cw1 clockwise		:  usdt -> btc -> xxx -> usdt
 			ccw1 counterclockwise:  usdt -> xxx -> btc -> usdt
-			cw2 clockwise        :  usdt -> eth -> xxx -> usdt
+			cw2 clockwise		:  usdt -> eth -> xxx -> usdt
 			ccw2 counterclockwise:  usdt -> xxx -> eth -> usdt
 			'''
 			#use Last as conditions
@@ -116,9 +116,9 @@ def get_current_money(coin):
 
 def get_route(path):
 	''' note: 
-	cw1 clockwise        :  usdt -> btc -> xxx -> usdt
+	cw1 clockwise		:  usdt -> btc -> xxx -> usdt
 	ccw1 counterclockwise:  usdt -> xxx -> btc -> usdt
-	cw2 clockwise        :  usdt -> eth -> xxx -> usdt
+	cw2 clockwise		:  usdt -> eth -> xxx -> usdt
 	ccw2 counterclockwise:  usdt -> xxx -> eth -> usdt
 	'''
 	if (path[0] > 1): #only process if profit is greater than 1
@@ -240,9 +240,17 @@ def get_available_balance(coin):
 		
 def get_price(coin1, coin2, type):
 	try:
-		price = api.get_marketsummary(coin1+"-"+coin2).get("result")[0].get(type)
+		m = api.get_marketsummary(coin1+"-"+coin2)
+		#print m 
+		price = m.get("result")[0].get(type)
 	except:
-		price = api.get_marketsummary(coin2+"-"+coin1).get("result")[0].get(type)	
+		try:
+			m = api.get_marketsummary(coin2+"-"+coin1)
+			#print m 
+			price = m.get("result")[0].get(type)
+		except:
+			print m
+			price = 0
 	return price
 	
 def wait_top(coin_top, coin_base, wait_wave_num):
@@ -339,7 +347,7 @@ def is_trade_order_success(coin_src, coin_target, size, price, timeout_ms):
 		#TODO: get balance
 		balance_current = get_available_balance(coin_target)
 		if(balance_current != balance_prev):
-    		print "Order success: Pre {} -> Cur {} ".format(balance_prev, balance_current)
+			print "Order success: Pre {} -> Cur {} ".format(balance_prev, balance_current)
 			return 1 #success
 		#check timeout
 	print "Order failed"
@@ -377,7 +385,7 @@ def func_surf_wave(coin_src, coin_target):
 	#wait top
 	wait_top(coin_target, coin_src, 10)
 def func_pump_wave(coin_src):
-    		
+			
 	#get size
 	size = get_available_balance(coin_src)
 	print "Balance: {}".format(size)
@@ -538,7 +546,7 @@ def main_catch_percent():
 			
 
 def MAIN():
-
+	#print get_price("BTC", "XMR", "Ask")
 	main_surf_top()
 	#main_catch_percent()
 
