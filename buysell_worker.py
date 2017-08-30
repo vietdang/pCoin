@@ -78,7 +78,15 @@ class BittrexBuysellWorker(object):
 				print("Error in get {} price".format(market))
 				return ERROR.CONNECTION_FAIL
 			'''To do: unit != 0'''
-	def w_get_open_order(self, coin = None):
+	def w_get_open_order(self, market = None):
+		"""
+		Get list of uuid of open orders
+		:param market: String literal for coin1-coin2 (ex: USDT-XMR)
+		:return: uuid list
+		:rtype : str
+		"""
+		
+	def w_order_buy_sell(self, coin1, coin2, value1, price, timeout, cancel_on_timeout = True):
 		"""
 		Buy/Sell from coin c1 to coin coin2 at price 
 		:param coin1: String literal for coin 1 (ex: USDT)
@@ -89,17 +97,6 @@ class BittrexBuysellWorker(object):
 		:rtype : str
 		"""
 		
-		
-	def w_order_buy_sell(self, coin1, coin2, value1, price, timeout):
-		"""
-		Buy/Sell from coin c1 to coin coin2 at price 
-		:param coin1: String literal for coin 1 (ex: USDT)
-		:param coin2: String literal for coin 2 (ex: XMR)
-		:param value1: The value of coin1 which is used to buy/sell
-		:param price: buy/sell price, can be Ask, Last or Bid
-		:return: uuid order
-		:rtype : str
-		"""
 		value2_before = self.w_get_balance(coin2) #get current coin2 balance
 		market, type = self.w_get_market_name(coin1, coin2)
 		#print market, type
@@ -107,15 +104,15 @@ class BittrexBuysellWorker(object):
 		if (type == "Buy"):
 			order_buy_sell = self.api.buy_limit
 			quantity = value1/price*self.EXCHANGE_RATE
-			value2 = quantity
+			value2 = quantity*self.EXCHANGE_RATE
 		elif (type) == "Sell":			
 			order_buy_sell = self.api.sell_limit
 			quantity = value1
 			value2 = quantity*price*self.EXCHANGE_RATE
 		else:
-			print  "Error: Invalid market"
+			print  "Buy/Sell Error: Invalid market {}-{}".format(coin1,coin2)
 			return ERROR.CMD_INVALID	
-		
+		print("@@@ From {} {} buy {} {} at price {}.".format(value1, coin1, value2, coin2, price))
 		#Process buy/sell within timeout
 		#Several posible cases:
 		# 1. The price is too high/low, no one wants to buy/sell
@@ -129,6 +126,11 @@ class BittrexBuysellWorker(object):
 				while 1:
 					value2_after = self.w_get_balance(coin2)
 					if time.time() > process_time:
+						if cancel_on_timeout: #Cancel order because of timeout
+							self.api.cancel(uuid)	
+							print "Cancel order!"
+						else:
+							print "Order is still open!"
 						print "{} transaction was timeout".format(type)
 						return ERROR.TIME_OUT
 					if (value2_after < 0):
@@ -137,9 +139,10 @@ class BittrexBuysellWorker(object):
 						return ERROR.CMD_UNSUCCESS
 					if (value2_after - value2_before >= value2*0.9): #offset 10% for safety
 						#buy success
-						break
+						return uuid
 			elif m.get("message") == "INSUFFICIENT_FUNDS":
 				print("INSUFFICIENT_FUNDS issue")
+				print m
 				return ERROR.PARAMETERS_INVALID
 			else:
 				print m

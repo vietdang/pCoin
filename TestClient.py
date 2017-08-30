@@ -21,14 +21,14 @@ def MAIN():
 	v =  user.w_get_balance("BTC")
 	p = user.w_get_price("BTC-XMR", "Bid")
 	p = 0.5*p  #Test timeout by buying with very low price
-	print p, v
+	#print p, v
 	r = user.w_order_buy_sell("BTC","XMR", v, p, 3 )
 	#r = user.w_order_buy_sell("XMR","BTC", v, p, 3)
 	if (r < 0): #Error
 		print r 
 		if r == ERROR.TIME_OUT:
 			#retry with actual price
-			print "Retry but not"
+			print "Test ok"
 		
 	
 if __name__ == "__main__":
