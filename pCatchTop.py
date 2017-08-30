@@ -258,7 +258,7 @@ def wait_top(coin_top, coin_base, wait_wave_num):
 		print "{} Current Price: {}, Change rate: {}".format(str(datetime.now()), price_current, change_rate)
 		if(change_rate < 0):
 			count_price_drop = count_price_drop + 1
-			if (count_price_drop > wait_wave_num1):
+			if (count_price_drop > wait_wave_num):
 				break
 		price_prev = price_current
 
@@ -328,22 +328,21 @@ def func_buy_sell_limit(coin_src, coin_target, size, price):
 def is_trade_order_success(coin_src, coin_target, size, price, timeout_ms):
 	market=coin_src + '-' + coin_target
 	balance_prev = get_available_balance(coin_target)
-	print "Balance before sell: {}".format(balance_prev)
-	result = 0
+	print "Order and wait to success: {}-{}, size {}, price {}, timeout {}, balance_prev {}".format(coin_src, coin_target, size, price, timeout_ms, balance_prev)
+
 	u = func_buy_sell_limit(coin_src, coin_target, size, price)
 	print u
+	
+	print "Wait completing order..."
 	while 1:
 		#check balance to confirm successfully
 		#TODO: get balance
 		balance_current = get_available_balance(coin_target)
-		print "Current balance: {}".format(balance_current)
 		if(balance_current != balance_prev):
-			result = 1
-		
-		if (result == 1):
+    		print "Order success: Pre {} -> Cur {} ".format(balance_prev, balance_current)
 			return 1 #success
 		#check timeout
-		
+	print "Order failed"
 	return 0 #fail
 def func_surf_wave(coin_src, coin_target):
 		
@@ -412,16 +411,9 @@ def func_pump_wave(coin_src):
 	wait_descrease_wave(coin_target, coin_src, 10, 1)
 def main_surf_top():
 	#parse params
-<<<<<<< HEAD
 	coin_src = "BTC"
 	#coin_target = "LTC"
 	#print "Start with {}-{}".format(coin_src, coin_target)
-=======
-	coin_src = "USDT"
-	coin_target = "LTC"
-	coin_target = raw_input("Coin: ")
-	print "Start with {}-{}".format(coin_src, coin_target)
->>>>>>> 42dca925fa6f52e65196c70461ddee79bd9f65be
 	if (RUN_TEST):
 		var = raw_input("Please enter Y/N to start/stop: ")
 		if (var == 'y'):
@@ -430,13 +422,8 @@ def main_surf_top():
 		else:
 			print "STOP"
 			return 0
-<<<<<<< HEAD
 	#func_surf_wave(coin_src, coin_target)
 	func_pump_wave(coin_src)
-=======
-	func_surf_wave(coin_src, coin_target)
-
->>>>>>> 42dca925fa6f52e65196c70461ddee79bd9f65be
 def func_calc_diff():
 
 	currCoin = 10 #simulation if key = None
