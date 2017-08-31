@@ -34,7 +34,8 @@ UsdtCoin =[
 ]
 
 EXCHANGE_RATE = 0.9975
-
+BUY_RATE_OFFSET = 1.005
+SELL_RATE_OFFSET = 0.99
 print key, secret
 api = Bittrex(key,secret)
 data = api.get_markets()
@@ -396,12 +397,12 @@ def func_pump_wave(coin_src):
 		#get price ask
 		price_ask = get_price(coin_src, coin_target, "Ask")
 		
-		price = price_ask
+		price_buy = price_ask*BUY_RATE_OFFSET #Add 1% to ensure buy success
 		#buy
-		if (is_trade_order_success(coin_src, coin_target, size, price, 2000)):
+		if (is_trade_order_success(coin_src, coin_target, size, price_buy, 2000)):
 			break
 	#wait top
-	wait_descrease_wave(coin_target, coin_src, 1, 0)
+	wait_descrease_wave(coin_target, coin_src, 2, 1)
 	
 	#get size
 	size = get_available_balance(coin_target)
@@ -409,10 +410,18 @@ def func_pump_wave(coin_src):
 	while 1:
 		#get price bid
 		price_bid = get_price(coin_src, coin_target, "Bid")
-		
-		price = price_bid
+		timeout = 5
+		process_time = time.time() + timeout
+		while 1:
+			price_sell = price_bid*SELL_RATE_OFFSET #To ensure sell success
+			if (time.time() > process_time):
+				#sell anyway even lost
+				break
+			if (price_sell < price_buy*1.0025): #0.25% fee
+				time.sleep(0.1)
+			
 		#sell
-		if (is_trade_order_success(coin_target, coin_src, size, price, 2000)):
+		if (is_trade_order_success(coin_target, coin_src, size, price_sell, 2000)):
 			break
 	
 	#wait top
