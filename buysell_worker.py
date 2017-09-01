@@ -24,6 +24,14 @@ class BittrexBuysellWorker(object):
 			print "Error: Cannot get market summaries"
 			exit(1)
 		self.market_list = market_list
+	def w_get_api(self):
+		"""
+		Get balance of a coin
+		:return: api Bittrex.py
+		:rtype : Bittrex class
+		"""
+		return self.api
+		
 	def w_get_balance(self, coin):
 		"""
 		Get balance of a coin
@@ -181,5 +189,3 @@ class PoloniexBuysellWorker(object):
 	'''
 		To do
 		'''
-		
-	
