@@ -16,7 +16,7 @@ print key, secret
 
 user = BittrexBuysellWorker(key, secret)
 
-def MAIN():
+def test_order_buy_sell():
 	print "Local Time: " + str(datetime.now())
 	v =  user.w_get_balance("BTC")
 	p = user.w_get_price("BTC-XMR", "Bid")
@@ -38,6 +38,32 @@ def MAIN():
 	#print user.w_cancel_order(r[0])
 	print uuid
 	print user.w_cancel_order(uuid)
+	
+def test_get_price_by_value():
+	market = "BTC-CURE"
+	print "Market {}".format(market)
+	v = 30
+	type = "Ask"
+	p0 = p = user.w_get_price(market, type)
+	p = user.w_get_price(market, type, v)
+	print "{} price={:06.9f}  - Final price ={:06.9f} - value={:06.9f}".format(type, p0, p, v)
+	
+	v = 2000
+	type = "Ask"
+	p0 = user.w_get_price(market, type)
+	p = user.w_get_price(market, type, v)
+	print "{} price={:06.9f}  - Final price ={:06.9f} - value={:06.9f}".format(type, p0, p, v)
+	
+	v = 2000
+	type = "Bid"
+	p0 = user.w_get_price(market, type)
+	p = user.w_get_price(market, type, v)
+	print "{} price={:06.9f}  - Final price ={:06.9f} - value={:06.9f}".format(type, p0, p, v)
+	
+	
+def MAIN():
+	#test_order_buy_sell()
+	test_get_price_by_value()
 	
 	
 if __name__ == "__main__":

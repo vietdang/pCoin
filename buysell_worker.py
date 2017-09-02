@@ -69,22 +69,49 @@ class BittrexBuysellWorker(object):
 				print "Error: Invalid coin pair"				
 				return (None,None)
 				
-	def w_get_price(self, market, type, unit = 0):
+	def w_get_price(self, market, type, unit = 0, depth = 20):
 		"""
 		Get price Ask Last Bid 
 		:param market: String literal for coin1-coin2 (ex: USDT-XMR)
-		:param coin2: Ask/Last/Bid
+		:param type: Ask/Last/Bid
 		:param unit: if unit != 0, get price with respect to order book
 		:return: price
 		:rtype : float
 		"""
-		if type is "Last" or "Bid" or "Ask":
+		if type is "Last" or "Bid" or "Ask":						
 			try:
 				price = self.api.get_marketsummary(market).get("result")[0].get(type)
-				return price
+				if type == "Ask":
+					ordertype = "sell"
+				elif type == "Bid":
+					ordertype = "buy"
+				else: #Dont need to check order book for Last 
+					return price
+				
+				m = self.api.get_orderbook(market, ordertype, depth)
+				#print m
+				if (m.get("message") != ""): 
+					print "Fail to get order book of {}: {}".format(market, m.get("message"))
+					return ERROR.CMD_UNSUCCESS
+				else:
+					order_price_list = m.get("result")
+					#print order_price_list
+					sum_quantity = 0
+					for o in order_price_list:
+						#print o
+						quantity = o.get("Quantity")
+						price = o.get("Rate")
+						sum_quantity += quantity
+						if (sum_quantity >= unit):
+							return price	
+					
+	
 			except:
 				print("Error in get {} price".format(market))
 				return ERROR.CONNECTION_FAIL
+		else:
+			print("Invalid type of market (Ask/Bid/Last)")
+			return ERROR.PARAMETERS_INVALID
 			'''To do: unit != 0'''
 	def w_get_open_order(self, market = None):
 		"""
@@ -177,7 +204,18 @@ class BittrexBuysellWorker(object):
 		except:
 			print "Cannot cancel order {}".format(uuid)
 			return ERROR.CONNECTION_FAIL
-		
+			
+	def w_get_price_by_order_book(self, market, ordertype, value, depth = 20 ):
+		"""
+		Get the corresponding price for a given value -> Avoid stuck in buy/sell order
+		:param market: Ex: USDT-XMR
+		:param ordertype: "buy" or "sell"
+		:param value: The value of coin1 which is used to buy/sell
+		:return: uuid order
+		:rtype : str
+		"""
+		return 0
+	
 class PoloniexBuysellWorker(object):
 	def __init__(self, api, token = None):
 		#trading fees are dynamic. Decrease over volume. Get from server
