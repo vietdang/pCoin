@@ -152,7 +152,7 @@ def run_detect_round_change(run_times,interval):
 def detect_volume_change(prev_volume_list):
 	try:
 		''' A list of dictionary for each market 
-			{ marketname:(basevolume, servertime, speed) } 
+			{ marketname:(basevolume, servertime, speed, delta_time) } 
 			'''
 		curr_volume_list = {}
 		m = user.w_get_api().get_market_summaries()
@@ -166,6 +166,9 @@ def detect_volume_change(prev_volume_list):
 			volume = market.get("BaseVolume")
 			marketname = market.get("MarketName")
 			timestamp = market.get("TimeStamp")  #'2017-08-14T15:03:14.013'
+			p_ask = market.get("Ask")
+			p_bid = market.get("Bid")
+			p_last =market.get("Last")
 			try:
 				pattern = '%Y-%m-%dT%H:%M:%S.%f'
 				servertime = (datetime.strptime(timestamp, pattern) - epoch).total_seconds()
@@ -178,21 +181,25 @@ def detect_volume_change(prev_volume_list):
 			if (prev_volume_list):
 				delta_volume = volume - prev_volume_list.get(marketname)[0]
 				delta_time = servertime - prev_volume_list.get(marketname)[1]
+				delta_price_ask = (p_ask - prev_volume_list.get(marketname)[4])/p_ask
 				if (delta_time):
 					speed = (delta_volume/volume)/(delta_time)
 				else:
 					speed = 0
 			else:
 				speed = 0
-			curr_volume_list.update( {marketname: (volume, servertime, speed) })
+				delta_time = 0
+				delta_price_ask = 0
+			curr_volume_list.update( {marketname: (volume, servertime, speed, delta_time, p_ask, delta_price_ask) })
 		return curr_volume_list
 		
 	except Exception as e:
 		print(e.message)
-		print err_line_track()
+		print "Error in line", err_line_track()
 		
 			
 def run_detect_volume_change(run_times, interval):
+	print "{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask) } "
 	prev_volume_list = {}
 	i = 1
 	while 1:
@@ -201,18 +208,31 @@ def run_detect_volume_change(run_times, interval):
 		prev_volume_list = detect_volume_change(prev_volume_list)
 		#print prev_volume_list
 		
-		'''Check the max and min of market'''
+		'''Check the max and min of market
+			{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask) } 
+		'''
+		market_change_list = []
 		try:
-			market_max, stat_max = max(prev_volume_list.iteritems(),key=lambda item:item[1][2])
-			if (stat_max[2] > 0.01):
-				print "Round", i, "__  Up __", curr_time, market_max, stat_max
 			
-			market_min, stat_min = min(prev_volume_list.iteritems(),key=lambda item:item[1][2])
-			if (stat_min[2] < -0.01):
-				print "Round", i, "__ Down__", curr_time, market_min, stat_min
+			for m in prev_volume_list:
+				basevolume, servertime, speed, delta_time, p_ask, delta_price_ask = prev_volume_list.get(m)
+				if (delta_time <= 20) and (speed > 0.005):
+					market_change_list.append((m,basevolume, servertime, speed, delta_time))
+			if market_change_list:
+				if delta_price_ask > 0:
+					print "Round", i, "__ Up __", curr_time, market_change_list
+				else:
+					print "Round", i, "__Down__", curr_time, market_change_list
+			#market_max, stat_max = max(prev_volume_list.iteritems(),key=lambda item:item[1][2])
+			#if (stat_max[2] > 0.01):
+			#	print "Round", i, "__  Up __", curr_time, market_max, stat_max
+			
+			#market_min, stat_min = min(prev_volume_list.iteritems(),key=lambda item:item[1][2])
+			#if (stat_min[2] < -0.01):
+			#	print "Round", i, "__ Down__", curr_time, market_min, stat_min
 		except Exception as e:
 			print(e.message)
-			print err_line_track()
+			print "Error in line", err_line_track()
 			
 		time.sleep(interval)
 		
