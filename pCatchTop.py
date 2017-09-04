@@ -34,8 +34,8 @@ UsdtCoin =[
 ]
 
 EXCHANGE_RATE = 0.9975
-BUY_RATE_OFFSET = 1.005
-SELL_RATE_OFFSET = 0.99
+BUY_RATE_OFFSET = 1.0005
+SELL_RATE_OFFSET = 0.999
 print key, secret
 api = Bittrex(key,secret)
 data = api.get_markets()
