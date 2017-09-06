@@ -1,8 +1,9 @@
 from worker_market import *
 
 watchlist = [
+	"BTC-NAV",
 	#"USDT-NEO", 
-	"BTC-PAY",
+	#"BTC-OK",
 	#"USDT-BCC",
 	#"USDT-BTC",
 	#"USDT-DASH",

@@ -224,7 +224,7 @@ def run_detect_order_change(run_times, interval, watchlist=[]):
 	marketsumaries_list = {}
 	i = 1
 	while 1:
-		curr_time = str(datetime.now())
+		curr_time = str(datetime.now().time())
 		''' Get prev and curr marketsummaries information '''
 		marketsumaries_list = detect_market_change(marketsumaries_list,watchlist)
 
@@ -247,6 +247,10 @@ def run_detect_order_change(run_times, interval, watchlist=[]):
 					delta_order = status.get("DeltaOrder") *100
 					change = (p_bid-est_value)
 					change_percent = (p_bid-est_value)*100/est_value
+					if speed != 0:
+						change_volume_speed = change_percent/speed
+					else:
+						change_volume_speed = 0
 					''' Analysis market status '''
 					message =""
 					
@@ -268,8 +272,9 @@ def run_detect_order_change(run_times, interval, watchlist=[]):
 						message += "Fast_"
 					else:
 						message += "____"
-						
-					print("{}\t{}\t{}\tChange={:.8f}\tChange(%)={:.8f}\tEstValue={:.8f}\tBid={:.8f}\tAsk={:.8f}\tLast={:.8f}\tDeltaOrder={:.8f}\tPriceChange(%)={:.8f}\tDeltaTime={:.2f}".format(marketname, message, curr_time,  change, change_percent,p_ask,est_value, p_bid, p_ask, p_last, delta_order, delta_price, deltatime ))
+					deta_Est_last = est_value - p_last
+					print("{}\t{}\t{}\tdBE={:.8f} ~ {:.2f}(%)\tdBid(%)={:.4f}\tBid={:.8f}\tEst={:.8f}\tdEL={:.8f}\tLast={:.8f}\tAsk={:.8f}\tdOrder={:.8f}\tdTime={:.2f}\tC/V={:.8f}"\
+					.format(marketname, message, curr_time, change, change_percent, delta_price, p_bid, est_value, deta_Est_last, p_last, p_ask, delta_order,  deltatime, change_volume_speed))
 
 		except Exception as e:
 			print(e.message)
