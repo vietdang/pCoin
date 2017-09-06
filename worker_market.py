@@ -4,7 +4,11 @@ from datetime import datetime
 from utilities import *
 import operator
 import time
+import os 
 
+'''Make sure get correct local time in Windows Cygwin platform '''
+
+	
 try:
 	import user
 	key = user.key
@@ -149,12 +153,12 @@ def run_detect_round_change(run_times,interval):
 		else:
 			run_times -= 1
 			
-def detect_volume_change(prev_volume_list):
+def detect_market_change(prev_marketsumaries_list, watchlist=[]):
 	try:
 		''' A list of dictionary for each market 
 			{ marketname:(basevolume, servertime, speed, delta_time) } 
 			'''
-		curr_volume_list = {}
+		curr_marketsumaries_list = {}
 		m = user.w_get_api().get_market_summaries()
 		marketsummaries = m.get("result")
 
@@ -162,13 +166,19 @@ def detect_volume_change(prev_volume_list):
 		epoch = datetime(1970, 1, 1)
 		
 		for market in marketsummaries:
+			marketname = market.get("MarketName")
+			if watchlist and (marketname not in watchlist): #Only watch several coins. If watchlist is None then watch all coins
+				continue
+					
 			#basevolume = market.get("BaseVolume")
 			volume = market.get("BaseVolume")
-			marketname = market.get("MarketName")
+			marketsize = market.get("Volume")
+			
 			timestamp = market.get("TimeStamp")  #'2017-08-14T15:03:14.013'
 			p_ask = market.get("Ask")
 			p_bid = market.get("Bid")
 			p_last =market.get("Last")
+			est_value = volume/marketsize
 			try:
 				pattern = '%Y-%m-%dT%H:%M:%S.%f'
 				servertime = (datetime.strptime(timestamp, pattern) - epoch).total_seconds()
@@ -178,58 +188,164 @@ def detect_volume_change(prev_volume_list):
 		
 			#print marketname, volume, servertime
 			'''Calculate speed change due to previous status '''
-			if (prev_volume_list):
-				delta_volume = volume - prev_volume_list.get(marketname)[0]
-				delta_time = servertime - prev_volume_list.get(marketname)[1]
-				delta_price_ask = (p_ask - prev_volume_list.get(marketname)[4])/p_ask
-				if (delta_time):
+			if (prev_marketsumaries_list):
+				delta_volume = volume - prev_marketsumaries_list.get(marketname).get("BaseVolume")
+				delta_time = servertime - prev_marketsumaries_list.get(marketname).get("ServerTime")
+				delta_price = (p_bid - prev_marketsumaries_list.get(marketname).get("Bid"))/p_bid
+				delta_order = (p_ask - p_bid)/p_ask
+				if (delta_time != 0):
 					speed = (delta_volume/volume)/(delta_time)
 				else:
 					speed = 0
 			else:
 				speed = 0
 				delta_time = 0
-				delta_price_ask = 0
-			curr_volume_list.update( {marketname: (volume, servertime, speed, delta_time, p_ask, delta_price_ask) })
-		return curr_volume_list
+				delta_price = 0
+				delta_order = -1 #invalid value
+			curr_marketsumaries_list.update( {marketname: {"BaseVolume":volume, 
+													"ServerTime":servertime, 
+													"VolumeSpeed":speed, 
+													"DeltaTime":delta_time, 
+													"Ask":p_ask, 
+													"Bid":p_bid,
+													"Last":p_last,
+													"DeltaPrice":delta_price,
+													"MarketSize":marketsize,
+													"EstValue":est_value,
+													"DeltaOrder":delta_order}})
+		#print curr_marketsumaries_list
+		return curr_marketsumaries_list
 		
 	except Exception as e:
 		print(e.message)
 		print "Error in line", err_line_track()
 		
-			
-def run_detect_volume_change(run_times, interval):
-	print "{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask) } "
-	prev_volume_list = {}
+def run_detect_order_change(run_times, interval, watchlist=[]):
+	marketsumaries_list = {}
 	i = 1
 	while 1:
 		curr_time = str(datetime.now())
+		''' Get prev and curr marketsummaries information '''
+		marketsumaries_list = detect_market_change(marketsumaries_list,watchlist)
+
+		
+		try:
+			''' Only check if satisfy condition '''
+			if marketsumaries_list:
+				for marketname, status in marketsumaries_list.items():
+					#print m
+					#print m.items()
+					
+					#print marketname
+					delta_price = status.get("DeltaPrice") *100
+					speed = status.get("VolumeSpeed")
+					p_ask = status.get("Ask")
+					p_bid = status.get("Bid")
+					p_last = status.get("Last")
+					deltatime = status.get("DeltaTime")
+					est_value = status.get("EstValue")
+					delta_order = status.get("DeltaOrder") *100
+					change = (p_bid-est_value)
+					change_percent = (p_bid-est_value)*100/est_value
+					''' Analysis market status '''
+					message =""
+					
+					if delta_price >0:
+						message += "Up___"
+					elif delta_price <0:
+						message += "Down_"
+					else:
+						message += "Keep_"
+						continue
+						
+					
+					if delta_order < 0.1: #0.1%
+						message += "Strong_"
+					else:
+						message += "_______"
+						
+					if abs(deltatime) <3:
+						message += "Fast_"
+					else:
+						message += "____"
+						
+					print("{}\t{}\t{}\tChange={:.8f}\tChange(%)={:.8f}\tEstValue={:.8f}\tBid={:.8f}\tAsk={:.8f}\tLast={:.8f}\tDeltaOrder={:.8f}\tPriceChange(%)={:.8f}\tDeltaTime={:.2f}".format(marketname, message, curr_time,  change, change_percent,p_ask,est_value, p_bid, p_ask, p_last, delta_order, delta_price, deltatime ))
+
+		except Exception as e:
+			print(e.message)
+			print "Error in line", err_line_track()
+			
+		time.sleep(interval)
+		
+		if run_times == 1: #Run n times until reaching 1
+			break;
+		elif run_times == 0: #Run forever
+			continue
+		else:
+			run_times -= 1
+		i+=1
+	
+	
+def run_detect_market_change(run_times, interval, watchlist=[]):
+	#print "{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask, marketsize) } "
+	marketsumaries_list = {}
+	i = 1
+	while 1:
+		if os.getenv("TZ"):
+			os.unsetenv("TZ")
+		curr_time = str(datetime.now())
 		#print "round" , i
-		prev_volume_list = detect_volume_change(prev_volume_list)
-		#print prev_volume_list
+		marketsumaries_list = detect_market_change(marketsumaries_list,watchlist)
+		#print marketsumaries_list
 		
 		'''Check the max and min of market
-			{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask) } 
+			{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask, marketsize) } 
 		'''
 		market_change_list = []
 		try:
-			
-			for m in prev_volume_list:
-				basevolume, servertime, speed, delta_time, p_ask, delta_price_ask = prev_volume_list.get(m)
-				if (delta_time <= 20) and (speed > 0.005):
-					market_change_list.append((m,basevolume, servertime, speed, delta_time))
-			if market_change_list:
-				if delta_price_ask > 0:
-					print "Round", i, "__ Up __", curr_time, market_change_list
-				else:
-					print "Round", i, "__Down__", curr_time, market_change_list
-			#market_max, stat_max = max(prev_volume_list.iteritems(),key=lambda item:item[1][2])
-			#if (stat_max[2] > 0.01):
-			#	print "Round", i, "__  Up __", curr_time, market_max, stat_max
-			
-			#market_min, stat_min = min(prev_volume_list.iteritems(),key=lambda item:item[1][2])
-			#if (stat_min[2] < -0.01):
-			#	print "Round", i, "__ Down__", curr_time, market_min, stat_min
+			if marketsumaries_list:
+				for marketname, status in marketsumaries_list.iteritems():					
+					delta_time = status.get("DeltaTime")
+					speed = status.get("VolumeSpeed")
+					if (delta_time <= 20) and (speed > 0.00):
+						market_change_list.append({marketname:status})
+						
+				if market_change_list:
+					for m in market_change_list:
+						#print m
+						#print m.items()
+						marketname, status =m.items()[0]
+						#print marketname
+						delta_price = status.get("DeltaPrice") *100
+						speed = status.get("VolumeSpeed")
+						p_ask = status.get("Ask")
+						p_bid = status.get("Bid")
+						p_last = status.get("Last")
+						deltatime = status.get("DeltaTime")
+						est_value = status.get("EstValue")
+						message =""
+						if delta_price > 1:
+							message = "Up___Strong_"
+						elif delta_price > 0:
+							message = "Up__________"
+						elif delta_price < -1:
+							message = "Down_Strong_"
+						elif delta_price < 0:
+							message = "Down________"
+						else:
+							message = "Keep________"
+						if abs(deltatime) <3:
+							message += "Fast"
+						else:
+							message += "____"
+						print "{}\t{}\t{}\tSpeed={:.8f}\tPriceChange(%)={:.8f}\tDeltaTime={:.2f}\tAsk={:.8f}\tBid={:.8f}\tLast={:.8f}\tEstValue={:.8f}\tChange={:.8f}".format(message, curr_time, marketname, speed, delta_price, deltatime, p_ask, p_bid, p_last,est_value, p_bid-est_value )
+				#market_max, stat_max = max(marketsumaries_list.iteritems(),key=lambda item:item[1][2])
+				#if (stat_max[2] > 0.01):
+				#	print "Round", i, "__  Up __", curr_time, market_max, stat_max
+				
+				#market_min, stat_min = min(marketsumaries_list.iteritems(),key=lambda item:item[1][2])
+				#if (stat_min[2] < -0.01):
+				#	print "Round", i, "__ Down__", curr_time, market_min, stat_min
 		except Exception as e:
 			print(e.message)
 			print "Error in line", err_line_track()
@@ -246,6 +362,20 @@ def run_detect_volume_change(run_times, interval):
 
 if __name__ == "__main__":
 	#run_detect_round_change(0, 5)
-	run_detect_volume_change(20000,1)
+	watchlist = [
+		"USDT-NEO", 
+		#"BTC-OK",
+		#"USDT-BCC",
+		#"USDT-BTC",
+		#"USDT-DASH",
+		#"USDT-ETC",
+		#"USDT-ETH",
+		#"USDT-LTC",
+		#"USDT-NEO",
+		#"USDT-XMR",
+		#"USDT-XRP",
+		#"USDT-ZEC",
+		]
+	run_detect_market_change(20000,1, watchlist)
 	
 	
