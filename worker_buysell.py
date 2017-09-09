@@ -196,6 +196,45 @@ class BittrexBuySellWorker(BittrexExchange):
 			print "Cannot cancel order {}".format(uuid)
 			return ERROR.CONNECTION_FAIL
 			
-	
+	def w_display_account_balances(self):
+		"""
+		Display all available coins with balances > 0 (include total and available)
+		:return: error code
+		:rtype : ERROR
+		"""
+		try:
+			m = self.w_get_account_balances()
+			print "Account balances:"
+			if m:
+				for c in m:
+					print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}".format( c.get("Currency"), c.get("Balance"), c.get("Available"))
+			return ERROR.CMD_SUCCESS
+		except:
+			print "Cannot display account balance"
+			return ERROR.CONNECTION_FAIL
+			
+	def w_display_coin_balances(self, coin):
+		"""
+		Display target coin balance(include total and available)
+		:return: error code
+		:rtype : ERROR
+		"""
+		try:
+			available = self.w_get_coin_available_balance(coin)
+			total = self.w_get_coin_total_balance(coin)
+			if coin != "BTC":
+				BTC_XXX_bid = self.w_get_price(self.w_get_market_name(coin,"BTC"),"Bid")
+				est_btc_value = total*BTC_XXX_bid
+			else:
+				est_btc_value = total
+			print "Coin balances:"
+			print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}, Est(BTC): {:.10f}".format(coin,total,available,est_btc_value)
+			return ERROR.CMD_SUCCESS
+		except:
+			print "Cannot display account balance"
+			return ERROR.CONNECTION_FAIL
+			
+
+
 	
 

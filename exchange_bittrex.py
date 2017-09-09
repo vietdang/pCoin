@@ -125,3 +125,24 @@ class BittrexExchange(Bittrex):
 		else:
 			print("Invalid type of market (Ask/Bid/Last)")
 			return ERROR.PARAMETERS_INVALID
+	
+	def w_display_market_summary(self,market):
+		"""
+		Display target coin summary
+		:return: error code
+		:rtype : ERROR
+		"""
+		try:
+			m = self.get_marketsummary(market)
+			if m.get("success"):
+				data = m.get("result")[0]
+				bid = data.get("Bid")
+				ask = data.get("Ask")
+				last = data.get("Last")
+				est_value = data.get("BaseVolume")/data.get("Volume")
+				dLE = (last-est_value)/est_value*100
+				print "Market: {}, Ask: {:.10f}, Bid: {:.10f}, Last: {:.10f}, EstValue: {:.10f}, dLE(%): {:.3f} %".format(market,ask,bid,last,est_value,dLE)
+			return ERROR.CMD_SUCCESS
+		except:
+			print "Cannot display market summary of ",market
+			return ERROR.CONNECTION_FAIL
