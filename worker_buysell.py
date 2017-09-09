@@ -1,49 +1,28 @@
-from bittrex import Bittrex
-import ast
-import traceback
-import operator
-import time
-import inspect
-from datetime import datetime
+from exchange_bittrex import BittrexExchange
 from utilities import ERROR
+import time
 
 
-class BittrexBuysellWorker(object):
-	def __init__(self, key = None, secret = None, token = None):
-		self.EXCHANGE_RATE = 0.9975  # 0.25% for each trading transaction
-		self.api = Bittrex(key,secret)
-		self.token = token 
+
+class BittrexBuySellWorker(BittrexExchange):
+	#Should provide valid key and secret to run this worker
+	def __init__(self, key, secret, token = None):
+		if not key or not secret:
+			print "Error in key and secret"
+			exit()
+		self.token = token
+		BittrexExchange.__init__(self,key,secret)
 		
-		#Get market list
-		try:
-			m = self.api.get_market_summaries()
-			#print m
-			market_list = []
-			for market in m.get("result"):
-				market_list.append(market.get("MarketName"))
-			#print marketlist
-		except:
-			print "Error: Cannot get market summaries"
-			exit(1)
-		self.market_list = market_list
 		
-	def w_get_api(self):
+	def w_get_coin_total_balance(self, coin):
 		"""
-		Get balance of a coin
-		:return: api Bittrex.py
-		:rtype : Bittrex class
-		"""
-		return self.api
-		
-	def w_get_balance(self, coin):
-		"""
-		Get balance of a coin
-		:return: current balance value
+		Get total balance of a coin
+		:return: current total balance value
 		:rtype : float
 		"""
 		try:
-			m = self.api.get_balance(coin)
-			print m
+			m = self.get_balance(coin)
+			#print m
 			if (m.get("success")):
 				v= m.get("result").get("Balance")
 				return v if v else 0
@@ -53,72 +32,50 @@ class BittrexBuysellWorker(object):
 		except:
 			print("Error Account/Connection issue. Get {} balance failed".format(coin))
 			return ERROR.CONNECTION_FAIL
-	def w_get_market_name(self, coin1, coin2, err_print_en = True):
+			
+	def w_get_coin_available_balance(self, coin):
 		"""
-		Get marketname for pair of coins
-		:param coin1: String literal for coin 1 (ex: USDT)
-		:param coin2: String literal for coin 2 (ex: XMR)
-		:param err_print_en: enable print error
-		:return: (MarketName, "Buy"/"Sell") 
-		:rtype : str
-		"""
-		market = coin1 + "-" + coin2
-		if market in self.market_list:
-			return (market, "Buy")
-		else:
-			market = coin2 + "-" + coin1
-			if market in self.market_list:
-				return (market, "Sell")
-			else:
-				#Don't print error for specific purpose: Check whether the coin in coin list
-				if (err_print_en):
-					print "Error: Invalid coin pair"				
-				return (None,None)
-				
-	def w_get_price(self, market, type, unit = 0, depth = 20):
-		"""
-		Get price Ask Last Bid 
-		:param market: String literal for coin1-coin2 (ex: USDT-XMR)
-		:param type: Ask/Last/Bid
-		:param unit: if unit != 0, get price with respect to order book
-		:return: price
+		Get available balance of a coin
+		:return: current available balance value
 		:rtype : float
 		"""
-		if type is "Last" or "Bid" or "Ask":						
-			try:
-				price = self.api.get_marketsummary(market).get("result")[0].get(type)
-				if type == "Ask":
-					ordertype = "sell"
-				elif type == "Bid":
-					ordertype = "buy"
-				else: #Dont need to check order book for Last 
-					return price
+		try:
+			m = self.get_balance(coin)
+			#print m
+			if (m.get("success")):
+				v= m.get("result").get("Available")
+				return v if v else 0
+			else:
+				print("Cannot get {} balance".format(coin))
+				return ERROR.CMD_UNSUCCESS
+		except:
+			print("Error Account/Connection issue. Get {} balance failed".format(coin))
+			return ERROR.CONNECTION_FAIL
+			
+	def w_get_account_balances(self):
+		"""
+		Get current account balance of all coins
+		:return: list of available balance and total balance of coins
+		:rtype : dict
+		"""
+		try:
+			m = self.get_balances()
+			if (m.get("success")):
+				acc = m.get("result")
+				balance_list = []
+				for coin in acc:
+					if coin.get("Balance") != 0:
+						balance_list.append(coin)
+				return balance_list
+						
 				
-				m = self.api.get_orderbook(market, ordertype, depth)
-				#print m
-				if (m.get("message") != ""): 
-					print "Fail to get order book of {}: {}".format(market, m.get("message"))
-					return ERROR.CMD_UNSUCCESS
-				else:
-					order_price_list = m.get("result")
-					#print order_price_list
-					sum_quantity = 0
-					for o in order_price_list:
-						#print o
-						quantity = o.get("Quantity")
-						price = o.get("Rate")
-						sum_quantity += quantity
-						if (sum_quantity >= unit):
-							return price	
-					
-	
-			except:
-				print("Error in get {} price".format(market))
-				return ERROR.CONNECTION_FAIL
-		else:
-			print("Invalid type of market (Ask/Bid/Last)")
-			return ERROR.PARAMETERS_INVALID
-			'''To do: unit != 0'''
+			else:
+				print("Cannot get account balances: {}".format(m.get("message")))
+				return ERROR.CMD_UNSUCCESS
+		except:
+			print("Error Account/Connection issue. Get account balances failed")
+			return ERROR.CONNECTION_FAIL
+			
 	def w_get_open_order(self, market = None):
 		"""
 		Get list of uuid of open orders
@@ -126,11 +83,22 @@ class BittrexBuysellWorker(object):
 		:return: uuid list
 		:rtype : str
 		"""
-		return self.api.get_open_orders(market)
+		try:
+			m = self.get_open_orders(market)
+		except:
+			print("Error in get_open_orders", m)
+			m = ERROR.CONNECTION_FAIL
+		return m
 		
 	def w_order_buy_sell(self, coin1, coin2, value1, price, timeout, cancel_on_timeout = True):
 		"""
 		Buy/Sell from coin c1 to coin coin2 at price 
+		Possible cases:
+			- timeout = 0 : nowait
+			- timeout = n : wait for n seconds until success 
+				+ cancel_on_timeout = True: cancel the order
+				+ cancel_on_timeout = False: keep the order and exit
+			- timeout = INFINITE: wait until success
 		:param coin1: String literal for coin 1 (ex: USDT)
 		:param coin2: String literal for coin 2 (ex: XMR)
 		:param value1: The value of coin1 which is used to buy/sell
@@ -139,16 +107,16 @@ class BittrexBuysellWorker(object):
 		:rtype : str
 		"""
 		
-		value2_before = self.w_get_balance(coin2) #get current coin2 balance
+		#value2_before = self.w_get_available_balance(coin2) #get current coin2 balance
 		market, type = self.w_get_market_name(coin1, coin2)
 		#print market, type
 		#Buy and sell are seperated from market point of view.
-		if (type == "Buy"):
-			order_buy_sell = self.api.buy_limit
+		if (type == self.BUY_ORDER):
+			order_buy_sell = self.buy_limit
 			quantity = value1/price*self.EXCHANGE_RATE
 			value2 = quantity*self.EXCHANGE_RATE
-		elif (type) == "Sell":			
-			order_buy_sell = self.api.sell_limit
+		elif (type) == self.SELL_ORDER:			
+			order_buy_sell = self.sell_limit
 			quantity = value1
 			value2 = quantity*price*self.EXCHANGE_RATE
 		else:
@@ -166,23 +134,25 @@ class BittrexBuysellWorker(object):
 				uuid = m.get("result").get("uuid")
 				process_time = time.time() + timeout
 				while 1:
-					value2_after = self.w_get_balance(coin2)
-					if time.time() > process_time:
-						if cancel_on_timeout: #Cancel order because of timeout
-							self.w_cancel_order(uuid)	
-							print "Cancel order!"
-						else:
-							print "Order is still open!"
-							return uuid
-						print "{} transaction was timeout".format(type)
-						return ERROR.TIME_OUT
-					if (value2_after < 0):
-						#Error
-						print "Error: in balance code {}".format(value2_after)
-						return ERROR.CMD_UNSUCCESS
-					if (value2_after - value2_before >= value2*0.9): #offset 10% for safety
-						#buy success
-						return uuid
+					try:
+						#value2_after = self.w_get_available_balance(coin2)
+						if time.time() > process_time:
+							if cancel_on_timeout: #Cancel order because of timeout
+								self.w_cancel_order(uuid)	
+								print "Cancel order!"
+							else:
+								print "Order is still open!"
+								return uuid
+							print "{} transaction was timeout".format(type)
+							return ERROR.TIME_OUT
+						
+							m = self.w_get_open_order(market)
+							#print m
+							if uuid not in m: #buy/sell success
+								break
+					except:
+						print "except in wait order"
+						time.sleep(3)
 			elif m.get("message") == "INSUFFICIENT_FUNDS":
 				print("INSUFFICIENT_FUNDS issue")
 				print m
@@ -193,6 +163,21 @@ class BittrexBuysellWorker(object):
 		except:
 			print "Error buy/sell. Conection failed."
 			return ERROR.CONNECTION_FAIL
+		
+	def w_order_buy_sell_by_market(self, market, ordertype, size, price, timeout, cancel_on_timeout = True):
+		"""
+		Buy/Sell market by ordertype at price 
+		:
+		:param market: USDT-XMR
+		:param ordertype: "LIMIT_BUY" / "LIMIT_SELL"
+		:param size: The value of coin1 which is used to buy/sell
+		:param price: buy/sell price, can be Ask, Last or Bid
+		:return: uuid order
+		:rtype : str
+		"""
+		coin1,coin2  = self.w_get_src_des_coin(market, ordertype)
+		return self.w_order_buy_sell(coin1, coin2, size, price, timeout, cancel_on_timeout)
+	
 	def w_cancel_order(self, uuid):
 		"""
 		Cancel an order via uuid 
@@ -202,8 +187,8 @@ class BittrexBuysellWorker(object):
 		"""
 		try:
 			#todo: need check timeout
-			self.api.cancel(uuid)
-			while uuid in self.api.get_open_orders():
+			self.cancel(uuid)
+			while uuid in self.get_open_orders():
 				print "Wait for cancel order {}".format(uuid)
 		
 			return ERROR.CMD_SUCCESS
@@ -211,28 +196,6 @@ class BittrexBuysellWorker(object):
 			print "Cannot cancel order {}".format(uuid)
 			return ERROR.CONNECTION_FAIL
 			
-	def w_get_market_list(self):
-		"""
-		Get Market name list
-		:return: market name list
-		:rtype : list
-		"""
-		return self.market_list
 	
-class PoloniexBuysellWorker(object):
-	def __init__(self, api, token = None):
-		#trading fees are dynamic. Decrease over volume. Get from server
-		self.api = api
-		self.BUY_RATE = api.returnFeeInfo().get("makerFee")  # 0.15% for maker
-		self.SELL_RATE = api.returnFeeInfo().get("takerFee") #0.25% for taker
-		
-		self.token = token 
-	'''
-		To do
-		'''
-		
-def w_extract_market_name(market):
-	"""
-	Extract market name "USDT-XMR" to ("USDT","XMR)
-	"""
-	return market.split("-")
+	
+
