@@ -1,6 +1,6 @@
 from exchange_bittrex import BittrexExchange
 from datetime import datetime
-from utilities import ERROR
+from utilities import *
 import operator
 import time
 import os 
@@ -162,7 +162,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			
 		except Exception as e:
 			print(e.message)
-			print "Error in line", ERROR.err_line_track()
+			print "Error in line", err_line_track()
 			
 			
 	def detect_market_change(self,prev_marketsumaries_list, watchlist=[]):
@@ -230,7 +230,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			
 		except Exception as e:
 			print(e.message)
-			print "Error in line", ERROR.err_line_track()
+			print "Error in line", err_line_track()
 			
 	def run_detect_order_change(self,run_times, interval, watchlist=[]):
 		marketsumaries_list = {}
@@ -290,7 +290,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 
 			except Exception as e:
 				print(e.message)
-				print "Error in line", ERROR.err_line_track()
+				print "Error in line", err_line_track()
 				
 			time.sleep(interval)
 			
@@ -365,7 +365,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 					#	print "Round", i, "__ Down__", curr_time, market_min, stat_min
 			except Exception as e:
 				print(e.message)
-				print "Error in line", ERROR.err_line_track()
+				print "Error in line", err_line_track()
 				
 			time.sleep(interval)
 			
@@ -409,7 +409,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			except Exception as e:
 				print(e.message)
 				print marketsummaries
-				print "Error in line", ERROR.err_line_track()
+				print "Error in line", err_line_track()
 				
 			time.sleep(interval)
 			

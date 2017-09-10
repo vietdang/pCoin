@@ -1,5 +1,5 @@
 from exchange_bittrex import BittrexExchange
-from utilities import ERROR
+from utilities import *
 import time
 
 
@@ -132,6 +132,12 @@ class BittrexBuySellWorker(BittrexExchange):
 			m = order_buy_sell(market, quantity, price)
 			if (m.get("success") == True):
 				uuid = m.get("result").get("uuid")
+				'''Need time to make sure order already in order list'''
+				while 1: 
+					m = self.w_get_open_order(market).get("result")
+					uuid_list = [u.get("OrderUuid") for u in m]
+					if uuid in uuid_list:
+						break
 				process_time = time.time() + timeout
 				while 1:
 					try:
@@ -140,16 +146,19 @@ class BittrexBuySellWorker(BittrexExchange):
 							if cancel_on_timeout: #Cancel order because of timeout
 								self.w_cancel_order(uuid)	
 								print "Cancel order!"
+								
 							else:
 								print "Order is still open!"
 								return uuid
 							print "{} transaction was timeout".format(type)
 							return ERROR.TIME_OUT
 						
-							m = self.w_get_open_order(market)
-							#print m
-							if uuid not in m: #buy/sell success
-								break
+						m = self.w_get_open_order(market).get("result")
+						#print m
+						uuid_list = [u.get("OrderUuid") for u in m]
+						if uuid not in uuid_list: #buy/sell success
+							return uuid
+						time.sleep(1)
 					except:
 						print "except in wait order"
 						time.sleep(3)
@@ -161,7 +170,9 @@ class BittrexBuySellWorker(BittrexExchange):
 				print m
 				return ERROR.CMD_UNSUCCESS
 		except:
-			print "Error buy/sell. Conection failed."
+			print "Error buy/sell. Conection failed:"
+			if m:
+				print m
 			return ERROR.CONNECTION_FAIL
 		
 	def w_order_buy_sell_by_market(self, market, ordertype, size, price, timeout, cancel_on_timeout = True):
@@ -222,14 +233,22 @@ class BittrexBuySellWorker(BittrexExchange):
 		try:
 			available = self.w_get_coin_available_balance(coin)
 			total = self.w_get_coin_total_balance(coin)
+
 			if coin != "BTC":
 				market, ordertype =self.w_get_market_name(coin,"BTC")
 				BTC_XXX_bid = self.w_get_price(market,"Bid")
 				est_btc_value = total*BTC_XXX_bid
 			else:
 				est_btc_value = total
+			
+			if coin != "USDT":
+				USDT_BTC_bid = self.w_get_price("USDT-BTC","Bid")
+				est_usdt_value = est_btc_value*USDT_BTC_bid
+			else:
+				est_usdt_value = total
+			
 			print "Coin balances:"
-			print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}, Est(BTC): {:.10f}".format(coin,total,available,est_btc_value)
+			print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}, Est(BTC): {:.10f}, Est(USDT): {:.4f}".format(coin,total,available,est_btc_value,est_usdt_value)
 			return ERROR.CMD_SUCCESS
 		except:
 			print "Cannot display account balance"

@@ -2,9 +2,13 @@ from worker_marketanalysis import BittrexMarketAnalysisWorker
 
 wk = BittrexMarketAnalysisWorker()
 
-watchlist = [
+market = raw_input("Please enter your market: (or type: all) ")
+
+if market == "all":
+	watchlist = [
 	#"BTC-ETC",
-	"BTC-NAV",
+	#"BTC-NAV",
+	#"BTC-QTUM",
 	#"USDT-NEO", 
 	#"BTC-OK",
 	#"USDT-BCC",
@@ -18,4 +22,7 @@ watchlist = [
 	#"USDT-XRP",
 	#"USDT-ZEC",
 	]
+else:
+	watchlist =[market]
+
 wk.run_detect_order_change(20000,1, watchlist)

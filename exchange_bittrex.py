@@ -1,5 +1,5 @@
 from bittrex import Bittrex
-from utilities import ERROR
+from utilities import *
 
 
 class BittrexExchange(Bittrex):
@@ -69,7 +69,7 @@ class BittrexExchange(Bittrex):
 			else:
 				#Don't print error for specific purpose: Check whether the coin in coin list
 				if (err_print_en):
-					print "Error: Invalid coin pair"				
+					print "Error: Invalid coin pair {}".format(market)		
 				return (None,None)
 	def w_get_src_des_coin(self, market, orderType, err_print_en = True):
 		"""
