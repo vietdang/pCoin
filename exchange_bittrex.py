@@ -42,6 +42,14 @@ class BittrexExchange(Bittrex):
 		"""
 		return self.market_list
 		
+	def w_get_coin_list(self):
+		"""
+		Get Coins name list
+		:return: coins name list
+		:rtype : list
+		"""
+		return self.coin_list
+		
 	def w_get_market_name(self, coin1, coin2, err_print_en = True):
 		"""
 		Get marketname for pair of coins
@@ -92,39 +100,42 @@ class BittrexExchange(Bittrex):
 		:return: price
 		:rtype : float
 		"""
-		if type is "Last" or "Bid" or "Ask":						
-			try:
-				price = self.get_marketsummary(market).get("result")[0].get(type)
-				if type == "Ask":
-					ordertype = "sell" #do not change this, from bittrex.py
-				elif type == "Bid":
-					ordertype = "buy" #do not change this
-				else: #Dont need to check order book for Last 
-					return price
-					
-				m = self.get_orderbook(market, ordertype, depth)
-				if (m.get("message") != ""): 
-					print "Fail to get order book of {}: {}".format(market, m.get("message"))
-					return ERROR.CMD_UNSUCCESS
-				else:
-					order_price_list = m.get("result")
-					#print order_price_list
-					sum_quantity = 0
-					for o in order_price_list:
-						#print o
-						quantity = o.get("Quantity")
-						price = o.get("Rate")
-						sum_quantity += quantity
-						if (sum_quantity >= unit):
-							return price	
-					
-	
-			except:
-				print("Error in get {} price".format(market))
-				return ERROR.CONNECTION_FAIL
+		if type.lower() == "ask":
+			type = "Ask"
+		elif type.lower() == "bid":
+			type = "Bid"
 		else:
-			print("Invalid type of market (Ask/Bid/Last)")
-			return ERROR.PARAMETERS_INVALID
+			type = "Last"
+								
+		try:
+			price = self.get_marketsummary(market).get("result")[0].get(type)
+			if type == "Ask":
+				ordertype = "sell" #do not change this, from bittrex.py
+			elif type == "Bid" :
+				ordertype = "buy" #do not change this
+			else: #Dont need to check order book for Last 
+				return price
+				
+			m = self.get_orderbook(market, ordertype, depth)
+			if (m.get("message") != ""): 
+				print "Fail to get order book of {}: {}".format(market, m.get("message"))
+				return ERROR.CMD_UNSUCCESS
+			else:
+				order_price_list = m.get("result")
+				#print order_price_list
+				sum_quantity = 0
+				for o in order_price_list:
+					#print o
+					quantity = o.get("Quantity")
+					price = o.get("Rate")
+					sum_quantity += quantity
+					if (sum_quantity >= unit):
+						return price		
+
+		except:
+			print("Error in get {} price".format(market))
+			return ERROR.CONNECTION_FAIL
+
 	
 	def w_display_market_summary(self,market):
 		"""
@@ -142,7 +153,10 @@ class BittrexExchange(Bittrex):
 				est_value = data.get("BaseVolume")/data.get("Volume")
 				dLE = (last-est_value)/est_value*100
 				print "Market: {}, Ask: {:.10f}, Bid: {:.10f}, Last: {:.10f}, EstValue: {:.10f}, dLE(%): {:.3f} %".format(market,ask,bid,last,est_value,dLE)
-			return ERROR.CMD_SUCCESS
+				return ERROR.CMD_SUCCESS
+			else:
+				print("Cannot display market summary of {}: ".format(market,m.get("message")))
+				return ERROR.CMD_UNSUCCESS
 		except:
 			print "Cannot display market summary of ",market
 			return ERROR.CONNECTION_FAIL

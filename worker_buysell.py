@@ -223,7 +223,8 @@ class BittrexBuySellWorker(BittrexExchange):
 			available = self.w_get_coin_available_balance(coin)
 			total = self.w_get_coin_total_balance(coin)
 			if coin != "BTC":
-				BTC_XXX_bid = self.w_get_price(self.w_get_market_name(coin,"BTC"),"Bid")
+				market, ordertype =self.w_get_market_name(coin,"BTC")
+				BTC_XXX_bid = self.w_get_price(market,"Bid")
 				est_btc_value = total*BTC_XXX_bid
 			else:
 				est_btc_value = total
