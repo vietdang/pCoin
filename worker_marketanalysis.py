@@ -300,7 +300,20 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			else:
 				run_times -= 1
 			i+=1
-
+	def run_get_market_state(self,run_times, interval, watchlist=[]):
+		marketsumaries_list = {}
+		i = 1
+		while 1:
+			self.get_market_state(watchlist)
+			time.sleep(interval)
+			
+			if run_times == 1: #Run n times until reaching 1
+				break;
+			elif run_times == 0: #Run forever
+				continue
+			else:
+				run_times -= 1
+			i+=1
 	def get_market_state(self, watchlist=[]):
 		curr_time = str(datetime.now())
 		print("******* MARKET STATUS *******\n{}".format(curr_time))
