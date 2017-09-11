@@ -64,7 +64,11 @@ class BittrexBuySellWorker(BittrexExchange):
 				acc = m.get("result")
 				balance_list = []
 				for coin in acc:
-					if coin.get("Balance") != 0:
+					size = coin.get("Balance")
+					if size != 0:
+						coin_name = coin.get("Currency")
+						coin["SizeBTC"] = self.w_convert_balances_to_BTC(coin_name, size)
+						coin["SizeUSDT"] = self.w_convert_balances_to_USDT(coin_name, size)
 						balance_list.append(coin)
 				return balance_list
 						
@@ -75,7 +79,35 @@ class BittrexBuySellWorker(BittrexExchange):
 		except:
 			print("Error Account/Connection issue. Get account balances failed")
 			return ERROR.CONNECTION_FAIL
-			
+	def w_convert_balances_to_BTC(self, coin_name, size):
+		if(coin_name=="BTC"):
+			return size
+		if (coin_name=="USDT"):
+			market_name = coin_name + "-BTC"
+		else:
+			market_name = "BTC-"+coin_name
+		price = self.w_get_price(market_name, "Last")
+		if (price > 0):
+			if (coin_name=="USDT"):
+				return size/price
+			else:
+				return size*price
+		else:
+				return ERROR.CMD_UNSUCCESS
+
+	def w_convert_balances_to_USDT(self, coin_name, size):
+		if(coin_name=="USDT"):
+			return size
+		BTC_size = self.w_convert_balances_to_BTC(coin_name, size)
+		if (BTC_size > 0):
+			market_name = "USDT-BTC"
+			price = self.w_get_price(market_name, "Last")
+			if (price > 0):
+					return BTC_size*price
+			else:
+					return ERROR.CMD_UNSUCCESS
+		else:
+				return ERROR.CMD_UNSUCCESS
 	def w_get_open_order(self, market = None):
 		"""
 		Get list of uuid of open orders
