@@ -265,27 +265,26 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 							change_volume_speed = 0
 						''' Analysis market status '''
 						message =""
-						
-						if delta_price >0:
-							message += "Up___"
-						elif delta_price <0:
-							message += "Down_"
-						else:
-							message += "Keep_"
-							continue
 							
+						if delta_price >0:
+								message += "[^]" #Up
+						elif delta_price <0:
+							message += "[v]" #Down
+						else:
+							message += "[-]" # Keep
+							continue
 						
 						if delta_order < 0.1: #0.1%
-							message += "Strong_"
+							message += "[S]" #Strong
 						else:
-							message += "_______"
+							message += "[-]" #Normal
 							
 						if abs(deltatime) <3:
-							message += "Fast_"
+							message += "[F]" #Fast
 						else:
-							message += "____"
+							message += "[-]" #Normal
 						deta_Est_last = est_value - p_last
-						print("{}\t{}\t{}\tdBE={:.8f} ~ {:.2f}(%)\tdBid(%)={:.4f}\tBid={:.8f}\tEst={:.8f}\tdEL={:.8f}\tLast={:.8f}\tAsk={:.8f}\tdOrder={:.8f}\tdTime={:.2f}\tC/V={:.8f}"\
+						print("{:10} {}\t{}\tdBE={:.8f} ~ {:.2f}(%)\tdBid(%)={:.4f}\tBid={:.8f}\tEst={:.8f}\tdEL={:.8f}\tLast={:.8f}\tAsk={:.8f}\tdOrder={:.8f}\tdTime={:.2f}\tC/V={:.8f}"\
 						.format(marketname, message, curr_time, change, change_percent, delta_price, p_bid, est_value, deta_Est_last, p_last, p_ask, delta_order,  deltatime, change_volume_speed))
 
 			except Exception as e:
@@ -301,6 +300,62 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			else:
 				run_times -= 1
 			i+=1
+
+	def get_market_state(self, watchlist=[]):
+		curr_time = str(datetime.now())
+		print("******* MARKET STATUS *******\n{}".format(curr_time))
+		marketsumaries_list = {}
+		''' Get prev and curr marketsummaries information '''
+		marketsumaries_list = self.detect_market_change(marketsumaries_list,watchlist)
+
+		
+		try:
+			''' Only check if satisfy condition '''
+			if marketsumaries_list:
+				for marketname, status in marketsumaries_list.items():
+					p_est = status.get("EstValue")
+					p_bid = status.get("Bid")
+					d_bid = (p_bid-p_est)*100/p_est
+
+					p_last = status.get("Last")
+					d_last = (p_last-p_est)*100/p_est
+
+					p_ask = status.get("Ask")
+					d_ask = (p_ask-p_est)*100/p_est
+
+					d_LB = p_last - p_bid
+					d_AB = p_ask - p_bid
+					p_BLA = d_LB*100.0/d_AB
+
+					delta_price = status.get("DeltaPrice") *100
+					speed = status.get("VolumeSpeed")
+					deltatime = status.get("DeltaTime")
+					delta_order = status.get("DeltaOrder") *100
+					change = (p_bid-p_est)
+					change_percent = (p_bid-p_est)*100/p_est
+					if speed != 0:
+						change_volume_speed = change_percent/speed
+					else:
+						change_volume_speed = 0
+					''' Analysis market status '''
+					if (p_BLA<0):
+						message = "[<<]" # Price will strong down
+					elif (p_BLA<20):
+						message = "[< ]" # Price will down
+					elif (p_BLA>100):
+						message = "[>>]" # Price will strong up
+					elif (p_BLA>80):
+						message = "[> ]" # Price will up
+					else:
+						message = "[--]" # Normal
+
+					message += " {:.2f}%-{:.2f}% ".format( p_BLA, 100-p_BLA)
+					print("{:10} {:25}Est={:.8f}\tBid={:.8f} ({:.2f}%)\tLast={:.8f} ({:.2f}%)\tAsk={:.8f} ({:.2f}%)"\
+					.format(marketname ,message,p_est, p_bid, d_bid, p_last, d_last, p_ask, d_ask,))
+
+		except Exception as e:
+			print(e.message)
+			print "Error in line", err_line_track()
 		
 		
 	def run_detect_market_change(self,run_times, interval, watchlist=[]):
