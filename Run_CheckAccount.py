@@ -13,15 +13,16 @@ except:
 wk = BittrexBuySellWorker(key, secret)
 
 m = wk.w_get_account_balances()
-print "w_get_account_balances()"
-if m:
+print "Account balances"
+totalBTC = 0
+totalUSDT = 0
+if m>=0:
 	for c in m:
-		print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}".format( c.get("Currency"), c.get("Balance"), c.get("Available"))
-
-
+		btc_size = c.get("SizeBTC")
+		totalBTC +=btc_size
+		usdt_size = c.get("SizeUSDT")
+		totalUSDT += usdt_size
+		print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}, BTC={:.10f}, USDT={:.10f} ".format( c.get("Currency"), c.get("Balance"), c.get("Available"), btc_size, usdt_size)
 		
-coin = "BTC"
-print "w_get_coin_available_balance(\"{}\"):".format(coin)
-available = wk.w_get_coin_available_balance(coin)
-total = wk.w_get_coin_total_balance(coin)
-print "Coin: {:.6s}, Total: {:.10f}, Available: {:.10f}".format(coin,total,available)
+print "-------------------------------------------"
+print "# Total: \t{:.10f} (BTC) ~ {:.10f} ($)".format(totalBTC, totalUSDT)

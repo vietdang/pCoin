@@ -26,4 +26,4 @@ else:
 	watchlist =[market]
 
 # wk.get_market_state(watchlist)
-wk.run_get_market_state(20000,1, watchlist)
+wk.run_get_market_state(20000,5, watchlist)
