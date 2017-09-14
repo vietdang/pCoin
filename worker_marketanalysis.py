@@ -370,7 +370,7 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			print(e.message)
 			print "Error in line", err_line_track()
 		
-	def run_check_market_list(self, marter_list_file):
+	def run_check_market_list(self, marter_list_file, is_display_old_coin = False):
     	
 		# Read old market
 		market_list_in_file = []
@@ -390,16 +390,21 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 		curr_marketsumaries_list = {}
 		m = self.get_market_summaries()
 		marketsummaries = m.get("result")
+		new_coin_info = ""
 		# Analysic market
 		for market in marketsummaries:
 			marketname = market.get("MarketName")
 			if (marketname not in market_list_in_file):
 				market_list_in_file.append(marketname)
 				addDate = market.get("Created")
-				print "New coin: {:10} \tAdded date: {}".format(marketname, addDate)
+				content =  "$$$ New coin: {:10} \tAdded date: {}\n".format(marketname, addDate)
+				print content
+				new_coin_info += content
+			elif is_display_old_coin:
+				print marketname
+
 		curr_time = str(datetime.now())		
 		curr_time = curr_time.replace(':','-')		
-		print curr_time
 		# Backup
 		try:
 			backup_file_name = "market_list_"+ curr_time +".txt"
@@ -413,6 +418,8 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 				with open(marter_list_file,"a") as f:
 					write_content = market_name + "\n"
 					f.write(write_content)
+			with open(marter_list_file,"a") as f:
+				f.write(new_coin_info)
 		except Exception as e:
 			print(e.message)
 			print "Cannot store file: {} ".format(marter_list_file)
