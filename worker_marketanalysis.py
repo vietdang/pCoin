@@ -370,7 +370,54 @@ class BittrexMarketAnalysisWorker(BittrexExchange):
 			print(e.message)
 			print "Error in line", err_line_track()
 		
+	def run_check_market_list(self, marter_list_file):
+    	
+		# Read old market
+		market_list_in_file = []
+		try:
+			with open(marter_list_file) as f:
+				lines = f.readlines()
+				#print lines
+			for line in lines:
+					market_list_in_file.append(line.rstrip('\n'))
+		except Exception as e:
+			print(e.message)
+			print "Cannot read file: {} ".format(marter_list_file)
+
+
+		# print market_list_in_file
 		
+		curr_marketsumaries_list = {}
+		m = self.get_market_summaries()
+		marketsummaries = m.get("result")
+		# Analysic market
+		for market in marketsummaries:
+			marketname = market.get("MarketName")
+			if (marketname not in market_list_in_file):
+				market_list_in_file.append(marketname)
+				addDate = market.get("Created")
+				print "New coin: {:10} \tAdded date: {}".format(marketname, addDate)
+		curr_time = str(datetime.now())		
+		curr_time = curr_time.replace(':','-')		
+		print curr_time
+		# Backup
+		try:
+			backup_file_name = "market_list_"+ curr_time +".txt"
+			os.rename(marter_list_file, backup_file_name )
+		except Exception as e:
+			print(e.message)
+			print "Cannot rename file: {} ".format(marter_list_file)
+		# Save
+		try:
+			for market_name in market_list_in_file:
+				with open(marter_list_file,"a") as f:
+					write_content = market_name + "\n"
+					f.write(write_content)
+		except Exception as e:
+			print(e.message)
+			print "Cannot store file: {} ".format(marter_list_file)
+
+
 	def run_detect_market_change(self,run_times, interval, watchlist=[]):
 		#print "{ marketname:(basevolume, servertime, speed, delta_time, p_ask, delta_price_ask, marketsize) } "
 		marketsumaries_list = {}
