@@ -16,7 +16,7 @@ class BittrexExchange(Bittrex):
 			market_list = []
 			for market in m.get("result"):
 				market_list.append(market.get("MarketName"))
-			#print marketlist
+			#print market_list
 		except:
 			print "Error: Cannot get market summaries"
 			exit(1)

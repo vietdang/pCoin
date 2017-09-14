@@ -24,7 +24,7 @@ def calculate_best_trade(coin_src, coin_des, limitSellConditionPrice, limitBuyCo
     CFM_STEP = 3
     RJT_STEP = 1
     market, nextOrderType = analyst.w_get_market_name(coin_src, coin_des)
-    print("fTopPrice, fTopConditionPrice, fTopTradePrice, fSellImmePrice, fBuyImmePrice, fBasePrice, fCurrentPrice, fBotTradePrice, fBotConditionPrice, fBotPrice, fBufferValue, fOffsetValue, bBuySignal, bSellSignal,date,time")
+    print("fTopPrice, fTopConditionPrice, limitSellCon, fSellImmePrice, fBuyImmePrice, fBasePrice, fCurrentPrice, limitBuyCon, fBotConditionPrice, fBotPrice, fBufferValue, fOffsetValue, bBuySignal, bSellSignal,date,time")
     fCurrentPrice_List = []
     # Get data
     collection_mongo = database_mongo[market]
@@ -32,7 +32,9 @@ def calculate_best_trade(coin_src, coin_des, limitSellConditionPrice, limitBuyCo
     fTopPrice = fBotPrice = firstMarketData.get("Last")
     nCfmSell = nConfirmSell*CFM_STEP
     nCfmBuy = nConfirmBuy*CFM_STEP
-    
+    STATE_SELL = 1
+    STATE_BUY = 2
+    nextState = STATE_SELL| STATE_BUY
     for marketInfo in collection_mongo.find():
         # In order to easy understand, definations of prices are described and sortder with descending order 
         # Base price:
@@ -80,7 +82,8 @@ def calculate_best_trade(coin_src, coin_des, limitSellConditionPrice, limitBuyCo
         '''fBotConditionPrice = (SMA60 +  2*SDTDEV + fBotPrice)/2 '''
         # fBotConditionPrice = (mean(fCurrentPrice_List) + 2*stddev(fCurrentPrice_List) + fBotPrice )/2
         fBotConditionPrice = (mean(fCurrentPrice_List) + fBotPrice )/2
-        
+        fUpper = mean(fCurrentPrice_List) + 2*stddev(fCurrentPrice_List)
+        fLower = mean(fCurrentPrice_List) - 2*stddev(fCurrentPrice_List)
         
         fBotTradePrice = fBotConditionPrice + fOffsetValue
 
@@ -89,28 +92,31 @@ def calculate_best_trade(coin_src, coin_des, limitSellConditionPrice, limitBuyCo
         # Check buy
         bBuySignal = False
         if (	(fCurrentPrice >  fBotConditionPrice) \
-            and (fBuyImmePrice <  (limitBuyConditionPrice/analyst.EXCHANGE_RATE))):
+            and (nextState & STATE_BUY)
+            and (fBuyImmePrice <  (limitBuyConditionPrice))):
             bBuySignal = True
         curr_time = marketInfo.get("TimeStamp")
-        # Check buy
+        # Check sell
         bSellSignal = False
         if (	(fCurrentPrice <  fTopConditionPrice) \
-            and (fSellImmePrice >  (limitSellConditionPrice/analyst.EXCHANGE_RATE))):
+            and (nextState & STATE_SELL)
+            and (fSellImmePrice >  (limitSellConditionPrice))):
             bSellSignal = True
-        
+        # Cap nhat so lan xac nhan khi co tin hieu mua/ban
+        # Sau so luong xac nhan thi no moi mua/ban
         if (bBuySignal == True):
             nCfmBuy -= CFM_STEP
         else:
-           nCfmBuy = min(nConfirmBuy*CFM_STEP, nCfmBuy + RJT_STEP)
+           nCfmBuy = min(nConfirmBuy*CFM_STEP, nCfmBuy + RJT_STEP) 
 
         if (bSellSignal == True):
             nCfmSell -= CFM_STEP
         else:
             nCfmSell = min(nConfirmSell*CFM_STEP, nCfmSell + RJT_STEP)
 
-        print"{:.8f}".format(fTopPrice),"{:.8f}".format( fTopConditionPrice),"{:.8f}".format( fTopTradePrice),\
+        print"{:.8f}".format(fTopPrice),"{:.8f}".format( fTopConditionPrice),"{:.8f}".format( limitSellConditionPrice),\
                 "{:.8f}".format( fSellImmePrice),"{:.8f}".format( fBuyImmePrice),"{:.8f}".format( fBasePrice),\
-                "{:.8f}".format( fCurrentPrice),"{:.8f}".format( fBotTradePrice),"{:.8f}".format( fBotConditionPrice),\
+                "{:.8f}".format( fCurrentPrice),"{:.8f}".format( limitBuyConditionPrice),"{:.8f}".format( fBotConditionPrice),\
                 "{:.8f}".format( fBotPrice),"{:.8f}".format( fBufferValue),"{:.8f}".format( fOffsetValue),\
                 "{}".format( bBuySignal),"{}".format( bSellSignal),"{}".format( limitBuyConditionPrice),"{}".format( limitSellConditionPrice),\
                 "{}".format(curr_time), nCfmBuy, nCfmSell
@@ -118,9 +124,18 @@ def calculate_best_trade(coin_src, coin_des, limitSellConditionPrice, limitBuyCo
         if (nCfmBuy <= 0): ### BUY ###
             nCfmBuy = nConfirmBuy*CFM_STEP
             fBotPrice = fCurrentPrice # Reset
+            # limitSellConditionPrice = fCurrentPrice/analyst.EXCHANGE_RATE
+            limitSellConditionPrice = fUpper
+            # limitSellConditionPrice = fBasePrice
+            nextState = STATE_SELL
         if (nCfmSell <= 0):### SELL ###
             nCfmSell = nConfirmSell*CFM_STEP
             fTopPrice = fCurrentPrice # Reset
+            # limitBuyConditionPrice = fCurrentPrice*analyst.EXCHANGE_RATE
+            limitBuyConditionPrice = fLower
+            # limitBuyConditionPrice = fBasePrice
+            
+            nextState = STATE_BUY
 
 if __name__ == "__main__":
 	#run_detect_round_change(0, 5)
@@ -142,12 +157,13 @@ if __name__ == "__main__":
 	#Get pre-trade
 	#auto_trade(20000,5, "BTC-KMD")
 	#coin_src = "LMC"
-	coin_src = "USDT"
+	coin_src = "KMD"
 	# coin_src = raw_input("Input SOURCE coin: ")
 	coin_des = "BTC"
 	# coin_des = raw_input("Input DEST coin: ")
-	limitSellConditionPrice = 2000
-	limitBuyConditionPrice = 4000
+	limitSellConditionPrice = 0.000509
+	limitBuyConditionPrice = 0.000509
+
 	fBufferRate = 0.01
 	fOffsetRate = 0.001
 
